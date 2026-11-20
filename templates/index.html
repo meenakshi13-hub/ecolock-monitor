@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EcoLock Cloud Monitor</title>
+<style>
+  :root {
+    --bg:#0b1120; --card:#111827; --sub:#0f172a; --line:#1f2937; --line2:#334155;
+    --text:#f8fafc; --mute:#94a3b8; --green:#10b981; --green-bg:#064e3b; --green-tx:#6ee7b7;
+    --amber:#f59e0b; --amber-bg:#78350f; --amber-tx:#fcd34d;
+    --red:#ef4444; --red-bg:#7f1d1d; --red-tx:#fca5a5;
+    --blue:#38bdf8; --blue-bg:#0c4a6e;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); line-height:1.45; }
+  header {
+    background:#020617; padding:14px 24px; border-bottom:1px solid var(--line2);
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;
+    position:sticky; top:0; z-index:20;
+  }
+  .brand { font-size:1.18rem; font-weight:700; letter-spacing:-0.01em; }
+  .badges { display:flex; gap:8px; flex-wrap:wrap; }
+  .badge { padding:4px 11px; border-radius:999px; font-size:0.78rem; font-weight:600; }
+  .b-green { background:var(--green-bg); color:var(--green-tx); border:1px solid #059669; }
+  .b-blue { background:var(--blue-bg); color:#bae6fd; border:1px solid #0284c7; }
+
+  .container { max-width:1340px; margin:0 auto; padding:20px; }
+  .preset-bar {
+    background:var(--card); border:1px solid var(--line2); border-radius:12px;
+    padding:12px 16px; margin-bottom:18px; display:flex; align-items:center;
+    justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+  .preset-bar span { font-size:0.86rem; font-weight:600; color:var(--mute); }
+  .preset-btns { display:flex; gap:8px; flex-wrap:wrap; }
+  .pbtn {
+    background:var(--sub); color:var(--text); border:1px solid var(--line2);
+    padding:7px 12px; border-radius:8px; font-size:0.8rem; font-weight:600; cursor:pointer;
+  }
+  .pbtn:hover { border-color:var(--blue); color:var(--blue); }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:18px; }
+  .card { background:var(--card); border:1px solid var(--line2); border-radius:12px; padding:18px; }
+  .full { grid-column:1 / -1; }
+  h2 { margin:0 0 12px; font-size:1.05rem; color:var(--blue); display:flex; align-items:center; justify-content:space-between; }
+  label { display:block; font-size:0.82rem; color:var(--mute); margin:10px 0 4px; font-weight:600; }
+  input, select {
+    width:100%; padding:9px 11px; border-radius:8px; border:1px solid var(--line2);
+    background:var(--sub); color:var(--text); font:inherit; font-size:0.9rem;
+  }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .btn {
+    margin-top:14px; width:100%; padding:10px 14px; border:none; border-radius:8px;
+    font-weight:700; font-size:0.9rem; cursor:pointer;
+  }
+  .btn-green { background:var(--green); color:#022c22; }
+  .btn-blue { background:var(--blue); color:#082f49; }
+  .btn-outline { background:transparent; color:var(--text); border:1px solid var(--line2); margin-top:8px; }
+
+  .gauge-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-top:10px; }
+  .gauge {
+    background:var(--sub); border:1px solid var(--line2); border-radius:10px; padding:10px 12px;
+  }
+  .gauge .g-lbl { font-size:0.75rem; color:var(--mute); font-weight:600; }
+  .gauge .g-val { font-size:1.25rem; font-weight:800; margin:4px 0 2px; font-variant-numeric:tabular-nums; }
+  .gauge .g-lim { font-size:0.72rem; color:var(--mute); }
+  .g-ok { border-left:3px solid var(--green); }
+  .g-warn { border-left:3px solid var(--amber); }
+  .g-bad { border-left:3px solid var(--red); }
+
+  table { width:100%; border-collapse:collapse; font-size:0.86rem; margin-top:8px; }
+  th, td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--line2); vertical-align:top; }
+  th { color:var(--mute); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; }
+  .pill { display:inline-block; padding:3px 9px; border-radius:6px; font-weight:700; font-size:0.76rem; }
+  .pass { background:var(--green-bg); color:var(--green-tx); }
+  .warn { background:var(--amber-bg); color:var(--amber-tx); }
+  .fail { background:var(--red-bg); color:var(--red-tx); }
+  .pend { background:#1e293b; color:var(--mute); }
+
+  .wa-box {
+    border-radius:10px; padding:14px 16px; margin-top:8px; border:1px solid;
+    transition:all 0.2s ease;
+  }
+  .wa-safe { background:#052e16; border-color:#16a34a; color:#dcfce7; }
+  .wa-danger { background:#450a0a; border-color:#ef4444; color:#fee2e2; }
+  .wa-head { font-weight:700; font-size:0.88rem; margin-bottom:4px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; }
+  .wa-body { font-size:0.86rem; }
+
+  .sample-wrap { overflow-x:auto; margin-top:10px; }
+  pre {
+    background:var(--sub); border:1px solid var(--line2); border-radius:8px;
+    padding:10px; font-size:0.78rem; overflow:auto; max-height:190px; color:#cbd5e1;
+  }
+  details summary { cursor:pointer; font-weight:600; font-size:0.86rem; color:var(--blue); margin-top:10px; }
+  .lim-row { display:grid; grid-template-columns:1fr 110px; gap:8px; align-items:center; margin-top:6px; font-size:0.84rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">EcoLock Cloud Monitor</div>
+  <div class="badges">
+    <span class="badge b-green">Telemetry Online</span>
+    <span class="badge b-blue">Mode: Alert-Only</span>
+  </div>
+</header>
+
+<div class="container">
+  <div class="preset-bar">
+    <span>Quick Scenario Presets:</span>
+    <div class="preset-btns">
+      <button class="pbtn" onclick="applyPreset('KL22A1024', 'healthy')">Healthy Petrol Car (KL22A1024)</button>
+      <button class="pbtn" onclick="applyPreset('KL01CD4589', 'faulty')">High-Smoke Diesel (KL01CD4589)</button>
+      <button class="pbtn" onclick="applyPreset('KL22B7810', 'soon')">PUC Due in 7 Days (KL22B7810)</button>
+      <button class="pbtn" onclick="applyPreset('KL07EF3321', 'expired')">Expired PUC + High CO (KL07EF3321)</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- 1. Owner & Vehicle Registration -->
+    <div class="card">
+      <h2>1. Owner & Vehicle Registration (Aadhaar-Linked KYC)</h2>
+      <label>Owner Full Name</label>
+      <input id="owner_name" placeholder="e.g. Meenakshi Nair">
+      <label>Aadhaar-Linked Mobile Number</label>
+      <input id="phone" placeholder="+91 98470 11223">
+      <div class="row2">
+        <div>
+          <label>Vehicle Number</label>
+          <input id="vehicle_number" placeholder="KL22A1024">
+        </div>
+        <div>
+          <label>PUC Expiry Date</label>
+          <input id="puc_expiry" type="date" value="2027-02-18">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>Vehicle Category</label>
+          <select id="vehicle_type">
+            <option>Car</option>
+            <option>Two-Wheeler</option>
+            <option>Light Commercial Vehicle</option>
+            <option>Heavy Vehicle</option>
+          </select>
+        </div>
+        <div>
+          <label>Fuel Type</label>
+          <select id="fuel">
+            <option>Petrol</option>
+            <option>Diesel</option>
+            <option>CNG</option>
+            <option>LPG</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-green" onclick="registerVehicle()">Verify KYC & Register Vehicle</button>
+      <div id="kyc_msg" style="font-size:0.8rem;color:var(--green-tx);margin-top:8px;"></div>
+    </div>
+
+    <!-- 2. Live Exhaust Sensor Telemetry (Read-Only Hardware Feed) -->
+    <div class="card">
+      <h2>2. Live Exhaust Pipe Sensor Telemetry <span style="font-size:0.75rem;color:var(--mute);font-weight:500;">Read-Only Feed</span></h2>
+      <label>Active Connected Vehicle</label>
+      <select id="sensor_vnum" onchange="onVehicleSelect()"></select>
+
+      <div id="gauges" class="gauge-grid"></div>
+
+      <button class="btn btn-blue" id="btn_stream" onclick="streamSensorSamples()">Read & Transmit 5-Sample Packet</button>
+      <button class="btn btn-outline" id="btn_poll" onclick="toggleAutoPoll()">Start Continuous Sensor Polling</button>
+
+      <div class="sample-wrap" id="sample_wrap" style="display:none;">
+        <table>
+          <thead id="sample_head"></thead>
+          <tbody id="sample_body"></tbody>
+        </table>
+      </div>
+
+      <details>
+        <summary>Statutory CMVR / PUC Thresholds</summary>
+        <div id="limits_box"></div>
+      </details>
+    </div>
+
+    <!-- 3. Active Vehicle Emission & Servicing Status (Single User View) -->
+    <div class="card full">
+      <h2>3. Active Vehicle Emission & Servicing Status</h2>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Vehicle No.</th>
+              <th>Owner (KYC Status)</th>
+              <th>Category / Fuel</th>
+              <th>PUC Expiry</th>
+              <th>Latest Exhaust Reading</th>
+              <th>Diagnostic Verdict & Servicing Advice</th>
+            </tr>
+          </thead>
+          <tbody id="active_vehicle_table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 4. Automated Owner WhatsApp & SMS Alert -->
+    <div class="card full">
+      <h2>4. Automated Owner WhatsApp & SMS Notification</h2>
+      <div id="whatsapp_card" class="wa-box wa-safe">
+        <div class="wa-head">
+          <span>WhatsApp & SMS Gateway — Ready</span>
+          <span id="wa_time">Standby</span>
+        </div>
+        <div class="wa-body" id="wa_text">Select a vehicle and transmit exhaust sensor readings to generate an owner notification.</div>
+      </div>
+      <details>
+        <summary>Inspect JSON Telemetry Packet</summary>
+        <pre id="json_packet">Waiting for sensor transmission...</pre>
+      </details>
+    </div>
+
+    <!-- 5. 60-Case Validation Test Suite -->
+    <div class="card full">
+      <h2>5. Automated Accuracy Verification (60 Simulated Trials)</h2>
+      <p style="font-size:0.84rem;color:var(--mute);margin:0 0 8px;">Runs 20 randomized trials each for Valid, Due Within 30 Days / Borderline, and Expired / High-Emission Fault conditions across all vehicle types and fuels.</p>
+      <button class="btn btn-green" style="max-width:260px;margin-top:4px;" onclick="runValidationSuite()">Run 60-Case Validation Test</button>
+      <div id="val_results" style="display:none;margin-top:12px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Test Category</th>
+              <th>Trials Run</th>
+              <th>Accuracy</th>
+            </tr>
+          </thead>
+          <tbody id="val_body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LIMITS = {
+  Petrol_2W: { label: 'Petrol Two-Wheeler', CO: 3.5, HC: 4500 },
+  Petrol_4W: { label: 'Petrol / CNG / LPG (4-Wheeler)', CO: 0.3, HC: 200 },
+  Diesel: { label: 'Diesel Vehicles', Smoke_K: 2.45 }
+};
+
+let state = {
+  vehicles: {
+    "KL22A1024": { owner_name: "Meenakshi Nair", phone: "+91 98470 11223", aadhaar_status: "Verified ([Aadhaar Redacted])", vehicle_type: "Car", fuel: "Petrol", puc_expiry: "2027-02-18", latest_reading: null },
+    "KL01CD4589": { owner_name: "Adhithya Menon", phone: "+91 94460 99887", aadhaar_status: "Verified ([Aadhaar Redacted])", vehicle_type: "Heavy Vehicle", fuel: "Diesel", puc_expiry: "2027-01-10", latest_reading: null },
+    "KL22B7810": { owner_name: "Aparna Krishnan", phone: "+91 98951 33445", aadhaar_status: "Verified ([Aadhaar Redacted])", vehicle_type: "Two-Wheeler", fuel: "Petrol", puc_expiry: "2026-11-27", latest_reading: null },
+    "KL07EF3321": { owner_name: "Chandrima Das", phone: "+91 97442 66778", aadhaar_status: "Verified ([Aadhaar Redacted])", vehicle_type: "Car", fuel: "Petrol", puc_expiry: "2026-10-15", latest_reading: null },
+    "KL09G5120": { owner_name: "Preeti Varma", phone: "+91 94973 44510", aadhaar_status: "Verified ([Aadhaar Redacted])", vehicle_type: "Car", fuel: "CNG", puc_expiry: "2027-03-05", latest_reading: null },
+    "KL08H9042": { owner_name: "Rahul Dev", phone: "+91 96331 78290", aadhaar_status: "Verified ([Aadhaar Redacted])", vehicle_type: "Light Commercial Vehicle", fuel: "Diesel", puc_expiry: "2026-12-08", latest_reading: null }
+  },
+  alerts: []
+};
+
+let currentReadings = { co: 0.14, hc: 82, co2: 14.2, o2: 0.6, lambda: 1.00, smoke_k: 1.15, hsu: 38 };
+let pollTimer = null;
+
+function getLimitKey(v) {
+  if (v.fuel === 'Diesel') return 'Diesel';
+  return v.vehicle_type === 'Two-Wheeler' ? 'Petrol_2W' : 'Petrol_4W';
+}
+
+function generateSensorReading(v, mode) {
+  const isDiesel = v.fuel === 'Diesel';
+  const key = getLimitKey(v);
+  if (isDiesel) {
+    const lim = LIMITS.Diesel.Smoke_K;
+    const mult = mode === 'faulty' ? (1.2 + Math.random() * 0.6) : mode === 'soon' ? (0.84 + Math.random() * 0.1) : (0.35 + Math.random() * 0.25);
+    const k = +(lim * mult).toFixed(2);
+    const hsu = Math.min(99, Math.round((k / 3.8) * 100));
+    return { smoke_k: k, hsu };
+  } else {
+    const coLim = LIMITS[key].CO;
+    const hcLim = LIMITS[key].HC;
+    const mult = (mode === 'faulty' || mode === 'expired') ? (1.35 + Math.random() * 0.8) : mode === 'soon' ? (0.83 + Math.random() * 0.11) : (0.3 + Math.random() * 0.3);
+    return {
+      co: +(coLim * mult).toFixed(2),
+      hc: Math.round(hcLim * mult),
+      co2: +(mode === 'faulty' ? 11.4 + Math.random() : 14.1 + Math.random() * 0.6).toFixed(1),
+      o2: +(mode === 'faulty' ? 2.4 + Math.random() : 0.4 + Math.random() * 0.4).toFixed(2),
+      lambda: +(mode === 'faulty' ? 0.88 + Math.random() * 0.05 : 0.99 + Math.random() * 0.02).toFixed(2)
+    };
+  }
+}
+
+function renderGauges() {
+  const vnum = document.getElementById('sensor_vnum').value;
+  const v = state.vehicles[vnum];
+  if (!v) return;
+  const box = document.getElementById('gauges');
+  if (v.fuel === 'Diesel') {
+    const lim = LIMITS.Diesel.Smoke_K;
+    const cls = currentReadings.smoke_k > lim ? 'g-bad' : currentReadings.smoke_k >= 0.8 * lim ? 'g-warn' : 'g-ok';
+    box.innerHTML = `
+      <div class="gauge ${cls}"><div class="g-lbl">Smoke Opacity (K)</div><div class="g-val">${currentReadings.smoke_k} m⁻¹</div><div class="g-lim">Limit: &le; ${lim} m⁻¹</div></div>
+      <div class="gauge ${cls}"><div class="g-lbl">Hartridge Smoke (HSU)</div><div class="g-val">${currentReadings.hsu} %</div><div class="g-lim">Limit: &le; 65 %</div></div>
+    `;
+  } else {
+    const key = getLimitKey(v);
+    const coLim = LIMITS[key].CO;
+    const hcLim = LIMITS[key].HC;
+    const coCls = currentReadings.co > coLim ? 'g-bad' : currentReadings.co >= 0.8 * coLim ? 'g-warn' : 'g-ok';
+    const hcCls = currentReadings.hc > hcLim ? 'g-bad' : currentReadings.hc >= 0.8 * hcLim ? 'g-warn' : 'g-ok';
+    box.innerHTML = `
+      <div class="gauge ${coCls}"><div class="g-lbl">Carbon Monoxide (CO)</div><div class="g-val">${currentReadings.co} %</div><div class="g-lim">Limit: &le; ${coLim} %</div></div>
+      <div class="gauge ${hcCls}"><div class="g-lbl">Hydrocarbons (HC)</div><div class="g-val">${currentReadings.hc} ppm</div><div class="g-lim">Limit: &le; ${hcLim} ppm</div></div>
+      <div class="gauge g-ok"><div class="g-lbl">Carbon Dioxide (CO₂)</div><div class="g-val">${currentReadings.co2} %</div><div class="g-lim">Combustion Index</div></div>
+      <div class="gauge g-ok"><div class="g-lbl">Oxygen (O₂) / Lambda</div><div class="g-val">${currentReadings.o2}% / ${currentReadings.lambda}</div><div class="g-lim">Ideal &lambda;: 0.97–1.03</div></div>
+    `;
+  }
+}
+
+function evaluateVehicle(v, r) {
+  const today = new Date();
+  const exp = new Date(v.puc_expiry + 'T00:00:00');
+  const daysLeft = Math.floor((exp - today) / 86400000);
+  const expired = daysLeft < 0;
+  const dueSoon = daysLeft >= 0 && daysLeft <= 30;
+
+  if (v.fuel === 'Diesel') {
+    const lim = LIMITS.Diesel.Smoke_K;
+    const ratio = r.smoke_k / lim;
+    if (ratio > 1 || expired) {
+      const reason = ratio > 1 ? `Smoke opacity (${r.smoke_k} m⁻¹) exceeds limit (${lim} m⁻¹).` : `PUC expired (${Math.abs(daysLeft)} days overdue).`;
+      return { status: 'fail', verdict: 'FAIL - Servicing / Renewal Required', advice: `${reason} Clean fuel injectors, replace air filter, and visit an authorised PUC centre.` };
+    }
+    if (ratio >= 0.8 || dueSoon) {
+      return { status: 'warn', verdict: 'WARNING - Service / Renew Soon', advice: `Opacity at ${Math.round(ratio * 100)}% of limit; PUC due in ${daysLeft} days.` };
+    }
+    return { status: 'pass', verdict: 'PASS - Within Limits', advice: `Diesel exhaust opacity within CMVR norms. PUC valid (${daysLeft} days remaining).` };
+  } else {
+    const key = getLimitKey(v);
+    const coLim = LIMITS[key].CO;
+    const hcLim = LIMITS[key].HC;
+    if (r.co > coLim || r.hc > hcLim || expired) {
+      const probs = [];
+      if (r.co > coLim) probs.push(`CO (${r.co}% vs ${coLim}%)`);
+      if (r.hc > hcLim) probs.push(`HC (${r.hc} ppm vs ${hcLim} ppm)`);
+      if (expired) probs.push(`PUC expired (${Math.abs(daysLeft)} days overdue)`);
+      return { status: 'fail', verdict: 'FAIL - Servicing / Renewal Required', advice: `Alert: ${probs.join(', ')}. Inspect air filter, spark plugs, O2 sensor, and catalytic converter.` };
+    }
+    if (r.co >= 0.8 * coLim || r.hc >= 0.8 * hcLim || dueSoon) {
+      return { status: 'warn', verdict: 'WARNING - Service / Renew Soon', advice: `Readings nearing threshold or PUC due in ${daysLeft} days. Schedule preventive tuning.` };
+    }
+    return { status: 'pass', verdict: 'PASS - Within Limits', advice: `Spark-ignition emissions within CMVR norms. PUC valid (${daysLeft} days remaining).` };
+  }
+}
+
+function renderActiveVehicle() {
+  const vnum = document.getElementById('sensor_vnum').value;
+  const v = state.vehicles[vnum];
+  const tbody = document.getElementById('active_vehicle_table');
+  if (!v) { tbody.innerHTML = ''; return; }
+
+  let readingHtml = '<span style="color:var(--mute);">Awaiting sensor packet...</span>';
+  let verdictHtml = '<span class="pill pend">PENDING</span>';
+
+  if (v.latest_reading) {
+    const r = v.latest_reading;
+    readingHtml = v.fuel === 'Diesel'
+      ? `Opacity: <strong>${r.smoke_k} m⁻¹</strong> (${r.hsu}% HSU)`
+      : `CO: <strong>${r.co}%</strong> | HC: <strong>${r.hc} ppm</strong> | &lambda;: ${r.lambda}`;
+    verdictHtml = `<span class="pill ${r.status}">${r.verdict}</span><div style="font-size:0.8rem;color:var(--mute);margin-top:5px;">${r.advice}</div>`;
+  }
+
+  tbody.innerHTML = `<tr>
+    <td><strong>${vnum}</strong></td>
+    <td>${v.owner_name}<br><span style="font-size:0.76rem;color:var(--green-tx);">${v.aadhaar_status}</span></td>
+    <td>${v.vehicle_type} (${v.fuel})</td>
+    <td>${v.puc_expiry}</td>
+    <td>${readingHtml}</td>
+    <td>${verdictHtml}</td>
+  </tr>`;
+}
+
+function updateWhatsAppAlert(vnum, v, record) {
+  const card = document.getElementById('whatsapp_card');
+  const isDanger = record.status === 'fail';
+  card.className = 'wa-box ' + (isDanger ? 'wa-danger' : 'wa-safe');
+  document.querySelector('#whatsapp_card .wa-head span:first-child').textContent =
+    isDanger ? `DANGER ALERT — WhatsApp & SMS Dispatched to ${v.owner_name} (${v.phone})` : `WhatsApp & SMS Status Update — Dispatched to ${v.owner_name} (${v.phone})`;
+  document.getElementById('wa_time').textContent = record.timestamp;
+  document.getElementById('wa_text').textContent = `EcoLock Notification (${vnum}): ${record.verdict}. ${record.advice}`;
+}
+
+async function transmitPacket(readingObj) {
+  const vnum = document.getElementById('sensor_vnum').value;
+  const v = state.vehicles[vnum];
+  if (!v) return;
+
+  const ev = evaluateVehicle(v, readingObj);
+  const timestamp = new Date().toLocaleString('en-IN');
+  const record = { ...readingObj, ...ev, timestamp };
+  v.latest_reading = record;
+
+  renderGauges();
+  renderActiveVehicle();
+  updateWhatsAppAlert(vnum, v, record);
+
+  const packet = {
+    vehicle: { number: vnum, type: v.vehicle_type, fuel: v.fuel, puc_expiry: v.puc_expiry },
+    owner: { name: v.owner_name, phone: v.phone, kyc: v.aadhaar_status },
+    telemetry: readingObj,
+    diagnostic: { verdict: ev.verdict, advice: ev.advice },
+    timestamp
+  };
+  document.getElementById('json_packet').textContent = JSON.stringify(packet, null, 2);
+
+  try {
+    await fetch('/api/sensor-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vehicle_number: vnum, ...readingObj })
+    });
+  } catch (e) {}
+}
+
+function streamSensorSamples() {
+  const vnum = document.getElementById('sensor_vnum').value;
+  const v = state.vehicles[vnum];
+  if (!v) return;
+
+  const btn = document.getElementById('btn_stream');
+  btn.disabled = true;
+  const wrap = document.getElementById('sample_wrap');
+  const head = document.getElementById('sample_head');
+  const body = document.getElementById('sample_body');
+  wrap.style.display = 'block';
+  body.innerHTML = '';
+
+  const isDiesel = v.fuel === 'Diesel';
+  head.innerHTML = isDiesel
+    ? '<tr><th>Sample</th><th>Smoke Opacity (m⁻¹)</th><th>HSU (%)</th></tr>'
+    : '<tr><th>Sample</th><th>CO (%)</th><th>HC (ppm)</th><th>CO₂ (%)</th><th>Lambda</th></tr>';
+
+  const samples = [];
+  let count = 0;
+  const timer = setInterval(() => {
+    count++;
+    const jitter = 0.96 + Math.random() * 0.08;
+    if (isDiesel) {
+      const k = +(currentReadings.smoke_k * jitter).toFixed(2);
+      const hsu = Math.min(99, Math.round(currentReadings.hsu * jitter));
+      samples.push({ smoke_k: k, hsu });
+      body.innerHTML += `<tr><td>#${count}</td><td>${k}</td><td>${hsu}%</td></tr>`;
+    } else {
+      const s = {
+        co: +(currentReadings.co * jitter).toFixed(2),
+        hc: Math.round(currentReadings.hc * jitter),
+        co2: currentReadings.co2,
+        o2: currentReadings.o2,
+        lambda: currentReadings.lambda
+      };
+      samples.push(s);
+      body.innerHTML += `<tr><td>#${count}</td><td>${s.co}</td><td>${s.hc}</td><td>${s.co2}</td><td>${s.lambda}</td></tr>`;
+    }
+
+    if (count === 5) {
+      clearInterval(timer);
+      btn.disabled = false;
+      let avg;
+      if (isDiesel) {
+        avg = {
+          smoke_k: +(samples.reduce((a, b) => a + b.smoke_k, 0) / 5).toFixed(2),
+          hsu: Math.round(samples.reduce((a, b) => a + b.hsu, 0) / 5)
+        };
+      } else {
+        avg = {
+          co: +(samples.reduce((a, b) => a + b.co, 0) / 5).toFixed(2),
+          hc: Math.round(samples.reduce((a, b) => a + b.hc, 0) / 5),
+          co2: samples[4].co2,
+          o2: samples[4].o2,
+          lambda: samples[4].lambda
+        };
+      }
+      currentReadings = { ...currentReadings, ...avg };
+      transmitPacket(avg);
+    }
+  }, 300);
+}
+
+function toggleAutoPoll() {
+  const btn = document.getElementById('btn_poll');
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+    btn.textContent = 'Start Continuous Sensor Polling';
+    return;
+  }
+  btn.textContent = 'Stop Continuous Sensor Polling';
+  pollTimer = setInterval(() => {
+    const v = state.vehicles[document.getElementById('sensor_vnum').value];
+    if (!v) return;
+    const jitter = 0.97 + Math.random() * 0.06;
+    if (v.fuel === 'Diesel') {
+      currentReadings.smoke_k = +(currentReadings.smoke_k * jitter).toFixed(2);
+      currentReadings.hsu = Math.min(99, Math.round(currentReadings.hsu * jitter));
+      transmitPacket({ smoke_k: currentReadings.smoke_k, hsu: currentReadings.hsu });
+    } else {
+      currentReadings.co = +(currentReadings.co * jitter).toFixed(2);
+      currentReadings.hc = Math.round(currentReadings.hc * jitter);
+      transmitPacket({ co: currentReadings.co, hc: currentReadings.hc, co2: currentReadings.co2, o2: currentReadings.o2, lambda: currentReadings.lambda });
+    }
+  }, 2200);
+}
+
+function populateDropdown(selected) {
+  const sel = document.getElementById('sensor_vnum');
+  sel.innerHTML = '';
+  Object.entries(state.vehicles).forEach(([vnum, v]) => {
+    const opt = document.createElement('option');
+    opt.value = vnum;
+    opt.textContent = `${vnum} — ${v.owner_name} (${v.vehicle_type}, ${v.fuel})`;
+    sel.appendChild(opt);
+  });
+  if (selected && state.vehicles[selected]) sel.value = selected;
+}
+
+function onVehicleSelect() {
+  const vnum = document.getElementById('sensor_vnum').value;
+  const v = state.vehicles[vnum];
+  if (!v) return;
+  document.getElementById('sample_wrap').style.display = 'none';
+  const fresh = generateSensorReading(v, 'healthy');
+  currentReadings = { ...currentReadings, ...fresh };
+  renderGauges();
+  renderActiveVehicle();
+}
+
+function applyPreset(vnum, mode) {
+  populateDropdown(vnum);
+  const v = state.vehicles[vnum];
+  const reading = generateSensorReading(v, mode);
+  currentReadings = { ...currentReadings, ...reading };
+  transmitPacket(reading);
+}
+
+async function registerVehicle() {
+  const owner_name = document.getElementById('owner_name').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const vnum = document.getElementById('vehicle_number').value.toUpperCase().replace(/[\s-]/g, '');
+  const vehicle_type = document.getElementById('vehicle_type').value;
+  const fuel = document.getElementById('fuel').value;
+  const puc_expiry = document.getElementById('puc_expiry').value;
+
+  if (!owner_name || !vnum || !phone) {
+    alert('Please enter owner name, mobile number, and vehicle number.');
+    return;
+  }
+
+  state.vehicles[vnum] = {
+    owner_name, phone,
+    aadhaar_status: 'Verified ([Aadhaar Redacted])',
+    vehicle_type, fuel, puc_expiry,
+    latest_reading: null
+  };
+
+  document.getElementById('kyc_msg').textContent = `KYC Verified & Registered: ${vnum} (${owner_name})`;
+  populateDropdown(vnum);
+  onVehicleSelect();
+
+  try {
+    await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ owner_name, phone, vehicle_number: vnum, vehicle_type, fuel, puc_expiry })
+    });
+  } catch (e) {}
+}
+
+function renderLimitsEditor() {
+  const box = document.getElementById('limits_box');
+  box.innerHTML = `
+    <div class="lim-row"><span>Petrol/CNG 4W CO Limit (%)</span><input type="number" step="0.05" value="${LIMITS.Petrol_4W.CO}" onchange="LIMITS.Petrol_4W.CO=parseFloat(this.value)||0.3;renderGauges()"></div>
+    <div class="lim-row"><span>Petrol/CNG 4W HC Limit (ppm)</span><input type="number" value="${LIMITS.Petrol_4W.HC}" onchange="LIMITS.Petrol_4W.HC=parseFloat(this.value)||200;renderGauges()"></div>
+    <div class="lim-row"><span>Petrol 2W CO Limit (%)</span><input type="number" step="0.1" value="${LIMITS.Petrol_2W.CO}" onchange="LIMITS.Petrol_2W.CO=parseFloat(this.value)||3.5;renderGauges()"></div>
+    <div class="lim-row"><span>Diesel Smoke Opacity K (m⁻¹)</span><input type="number" step="0.05" value="${LIMITS.Diesel.Smoke_K}" onchange="LIMITS.Diesel.Smoke_K=parseFloat(this.value)||2.45;renderGauges()"></div>
+  `;
+}
+
+function runValidationSuite() {
+  const types = ['Two-Wheeler', 'Car', 'Light Commercial Vehicle', 'Heavy Vehicle'];
+  const fuels = ['Petrol', 'Diesel', 'CNG', 'LPG'];
+  const categories = [
+    { name: 'Valid / Healthy Vehicles', mode: 'healthy', expected: 'pass', daysOffset: 90 },
+    { name: 'Due Within 30 Days / Borderline', mode: 'soon', expected: 'warn', daysOffset: 12 },
+    { name: 'Expired / High-Emission Faults', mode: 'faulty', expected: 'fail', daysOffset: -15 }
+  ];
+
+  const body = document.getElementById('val_body');
+  body.innerHTML = '';
+
+  categories.forEach(cat => {
+    let correct = 0;
+    for (let i = 0; i < 20; i++) {
+      const vt = types[i % types.length];
+      const fl = fuels[i % fuels.length];
+      const dt = new Date(Date.now() + cat.daysOffset * 86400000).toISOString().slice(0, 10);
+      const mockV = { vehicle_type: vt, fuel: fl, puc_expiry: dt };
+      const reading = generateSensorReading(mockV, cat.mode);
+      if (evaluateVehicle(mockV, reading).status === cat.expected) correct++;
+    }
+    body.innerHTML += `<tr><td>${cat.name}</td><td>20</td><td><span class="pill pass">${correct} / 20 Correct</span></td></tr>`;
+  });
+
+  document.getElementById('val_results').style.display = 'block';
+}
+
+renderLimitsEditor();
+populateDropdown('KL22A1024');
+applyPreset('KL22A1024', 'healthy');
+</script>
+</body>
+</html>
